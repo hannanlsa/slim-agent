@@ -4,23 +4,41 @@ build-backend = "hatchling.build"
 
 [project]
 name = "slim-agent"
-version = "0.1.0"
+version = "0.1.1"
 description = "Self-Learning Index Memory for AI agents"
 readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 authors = [
-    { name = "SLIM-Agent Authors" },
+    { name = "潘笑", email = "hannanlsa@users.noreply.github.com" },
+]
+maintainers = [
+    { name = "潘笑", email = "hannanlsa@users.noreply.github.com" },
+]
+keywords = [
+    "ai",
+    "agent",
+    "memory",
+    "rag",
+    "pointer",
+    "index",
+    "self-learning",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
 ]
 dependencies = [
     "click>=8.0.0",
@@ -32,7 +50,16 @@ dev = [
     "pytest>=7.0.0",
     "grapheme>=0.6.0",
     "wcwidth>=0.2.0",
+    "build>=1.0.0",
+    "hatchling>=1.18.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/hannanlsa/slim-agent"
+Repository = "https://github.com/hannanlsa/slim-agent"
+Issues = "https://github.com/hannanlsa/slim-agent/issues"
+Changelog = "https://github.com/hannanlsa/slim-agent/blob/main/CHANGELOG.md"
+Credits = "https://github.com/hannanlsa/slim-agent/blob/main/CREDITS.md"
 
 [project.scripts]
 slim = "slim_agent.cli:cli"
@@ -41,4 +68,32 @@ slim = "slim_agent.cli:cli"
 packages = ["src/slim_agent"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/", "tests/", "pyproject.toml", "SKILL.md", "README.md"]
+include = [
+    "src/",
+    "tests/",
+    "schema/",
+    "pyproject.toml",
+    "SKILL.md",
+    "README.md",
+    "CREDITS.md",
+    "CHANGELOG.md",
+    "LICENSE",
+]
+exclude = [
+    ".git/",
+    ".github/",
+    "__pycache__/",
+    "*.pyc",
+    "*.egg-info/",
+    ".pytest_cache/",
+    "*.egg",
+    "build/",
+    "dist/",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
