@@ -118,3 +118,33 @@ All text processing is grapheme-aware (CJK characters count as 1 grapheme, not 1
 ```python
 from text_grapheme import count_chars, clamp_text  # optional, degrades gracefully
 ```
+
+## Cross-Platform Intent & Hooks
+
+**Important**: This skill is intentionally a *single-machine* tool. Cross-device, cross-user, cross-tool data flow is **explicitly out of scope** for v0.x. Why: that requires a desktop-class product + auth + sync engine, which a Python library cannot provide.
+
+**What this skill DOES provide as cross-platform hooks** (so when a desktop-class product appears, it can read this data without lock-in):
+
+1. **Standard JSON schema** — see `schema/pointer_memory.schema.json`. Any external tool/agent that wants to interoperate can read/write this format. The schema is the cross-platform contract.
+
+2. **Pointer, not payload** — the entire philosophy is: store `summary + URL`, not full text. This means data is already portable by design (no need to migrate blobs).
+
+3. **SQLite as the storage layer** — single-file, zero-config, easy to copy/sync/export. Any future cloud service can ingest the `.db` file or a JSON export.
+
+4. **Reflection pool is append-only** — durable, replayable, no schema migrations needed. Future cross-platform consumers get free upgrade history.
+
+**Intended future users of these hooks** (none of which this project will build, but it leaves the door open):
+
+- A Raycast/Alfred-style launcher that surfaces pointer entries as quick search
+- A Notion/Obsidian plugin that imports the index as a linked database
+- Another agent framework (LangChain, AutoGen) reading the index as semantic search corpus
+- A future "Personal AI" OS-level memory service that adopts this schema
+
+**What this skill will NOT do** (to keep scope honest):
+
+- ❌ Implement cloud sync
+- ❌ Require user accounts / auth
+- ❌ Lock data into a proprietary format
+- ❌ Make network calls beyond the user's explicit `fetch` command
+
+If a desktop-class product emerges that wants to use this data, the schema + SQLite format are the handoff point. See `README.md` → "Roadmap - Cross-Platform" for the staged plan.

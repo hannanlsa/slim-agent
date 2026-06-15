@@ -299,3 +299,59 @@ pip install grapheme unicode-width
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.
+
+---
+
+## Roadmap — Cross-Platform
+
+**Stance**: This project explicitly scopes itself to **single-machine, local-first**. Cross-device, cross-user, cross-tool data flow is deferred to a future product layer that this Python library alone cannot provide.
+
+The reasoning: real cross-platform requires auth, sync engines, conflict resolution, devices, and UX — a desktop-class product concern, not a library concern. Aiming for it now would over-build and lock users in.
+
+### v0.x (now) — Single-machine foundation
+
+- ✅ SQLite storage, single file
+- ✅ Pointer = summary + URL (no payload)
+- ✅ JSON export of pointer entries
+- ✅ Standard JSON schema (`schema/pointer_memory.schema.json`) ← **cross-platform hook**
+
+**What this version provides as cross-platform hooks:**
+
+1. **Schema** (`schema/pointer_memory.schema.json`) — any external tool/agent can read/write pointer entries in this standardized format. The schema is intentionally the cross-platform *contract*.
+2. **Storage is portable** — a single `.db` file or its JSON export. Easy to copy, sync, ingest.
+3. **Pointers, not payloads** — full content stays at URLs. No blob migration cost.
+4. **Append-only reflections** — replayable, no schema migrations needed by future consumers.
+
+**What v0.x does NOT do (intentional):**
+
+- ❌ Cloud sync
+- ❌ User accounts / auth
+- ❌ Proprietary data formats
+- ❌ Network calls beyond explicit `fetch` command
+
+### v1.x (when?) — Data portability layer
+
+**Trigger**: A second consumer (CLI launcher, Notion plugin, another agent) wants to ingest the index.
+
+- Provide `slim export` / `slim import` for portable JSON bundles
+- Provide reference readers in 2-3 popular languages (JS, Rust) that consume `pointer_memory.schema.json`
+- Document "interop recipes" in this README
+
+**Out of scope**: still no cloud, no auth, no multi-user.
+
+### v2.x (much later) — Cross-device sync
+
+**Trigger**: A desktop-class / category-defining product emerges (think Raycast, Notion, Things) that has UX/auth/devices/conflict-resolution layers. At that point, the v0.x schema is the stable interface that the product can adopt.
+
+- That product can ingest a user's v0.x SQLite file or JSON export
+- The schema stays unchanged — users keep their data
+- A v0.x user upgrading to v2.x needs only to point the new product at their existing `slim_agent.db` file
+
+### What this means for users today
+
+- ✅ Your data is yours, in a portable schema
+- ✅ Any future "Personal AI" service can read what you wrote
+- ✅ Lock-in is impossible (open source + open format)
+- ⏸ Wait for a real cross-platform product before expecting sync
+
+The hook is in place. The data is future-proof. The actual cross-platform experience waits for a product that earns it.
