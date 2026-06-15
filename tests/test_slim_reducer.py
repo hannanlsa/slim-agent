@@ -74,9 +74,9 @@ class TestSlimReducer:
         assert len(report.suggestions) == 1
 
     def test_scan_threshold_filters_low_overlap(self, reducer, mgr):
-        # Skills with very little overlap
-        a = mgr.add_skill(name="skill-a", summary="python guide", tags=["python"])
-        b = mgr.add_skill(name="skill-b", summary="rust guide", tags=["rust"])
+        # Skills with very little overlap — longer summaries avoid 4-gram false positives
+        a = mgr.add_skill(name="skill-a", summary="python web framework documentation", tags=["python"])
+        b = mgr.add_skill(name="skill-b", summary="rust embedded systems compilation", tags=["rust"])
         mgr.activate(a.id)
         mgr.activate(b.id)
         report = reducer.scan_skills()
@@ -91,6 +91,37 @@ class TestSlimReducer:
         assert report.active_skill_count == 1
         # draft should not be in suggestions
         assert not any("draft-skill" in s.skills_names for s in report.suggestions)
+
+    def test_scan_simhash_cjk(self, reducer, mgr):
+        """SimHash should catch CJK near-duplicates that word-Jaccard misses."""
+        a = mgr.add_skill(name="json工具", summary="JSON解析工具用于处理数据", tags=["data"])
+        b = mgr.add_skill(name="json库", summary="JSON解析库用于处理数据", tags=["data"])
+        mgr.activate(a.id)
+        mgr.activate(b.id)
+        report = reducer.scan_skills()
+        assert report.has_overlaps is True
+        # SimHash signal should fire even though word-Jaccard is 0 (no shared space-separated tokens)
+        assert any("simhash" in s.reason for s in report.suggestions)
+
+    def test_scan_simhash_paraphrase(self, reducer, mgr):
+        """SimHash catches paraphrases that share char n-grams but differ in word order."""
+        a = mgr.add_skill(name="fetch-a", summary="fetch web pages and parse html", tags=["misc"])
+        b = mgr.add_skill(name="fetch-b", summary="parse html and fetch web pages", tags=["misc"])
+        mgr.activate(a.id)
+        mgr.activate(b.id)
+        report = reducer.scan_skills()
+        assert report.has_overlaps is True
+
+    def test_scan_reason_lists_signals(self, reducer, mgr):
+        """Reason field should enumerate all fired signals."""
+        a = mgr.add_skill(name="overlap-a", summary="web fetching tool", tags=["web"])
+        b = mgr.add_skill(name="overlap-b", summary="web fetching lib", tags=["web"])
+        mgr.activate(a.id)
+        mgr.activate(b.id)
+        report = reducer.scan_skills()
+        assert report.has_overlaps is True
+        reason = report.suggestions[0].reason
+        assert "tag Jaccard" in reason
 
 
 class TestRedundancyReport:

@@ -102,3 +102,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `python -m build --sdist --wheel` produces installable artifacts.
 
 [0.1.2]: https://github.com/hannanlsa/slim-agent/compare/0.1.1...0.1.2
+
+## [0.1.5] - 2026-06-16
+
+### Added
+- SimHash-based summary similarity signal in `SlimReducer` for CJK + paraphrase robustness
+- `simhash` module: character 4-gram → 64-bit BLAKE2b → Hamming distance similarity
+- New tests: `tests/test_simhash.py` (15 tests), CJK + paraphrase coverage in `test_slim_reducer.py`
+- Conservative `simhash_threshold=0.65` (tunable per-call)
+
+### Changed
+- `SlimReducer.scan_skills()` now combines 3 signals (tag Jaccard, word Jaccard, SimHash) and reports each fired signal in `reason`
+- Pre-computes SimHash fingerprints once per scan (avoids O(N²) recomputation)
+
+### Fixed
+- (none)
+
+[0.1.4] skipped — CLI bug fixes were rolled into the v0.1.5 testing flow

@@ -57,7 +57,8 @@ class PointerStore:
                 CREATE VIRTUAL TABLE IF NOT EXISTS pointers_fts USING fts5(
                     summary,
                     content='pointers',
-                    content_rowid='id'
+                    content_rowid='id',
+                    tokenize='trigram'
                 );
 
                 CREATE TRIGGER IF NOT EXISTS pointers_fts_insert AFTER INSERT ON pointers BEGIN

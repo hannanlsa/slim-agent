@@ -58,13 +58,14 @@ def cli() -> None:
     pass
 
 
-@cli.command()
+@cli.command(name="init")
 @_db_opt
 def init(db_path: Path) -> None:
     """Initialize all database tables."""
-    ps = PointerStore(db_path)
-    sm = SkillManager(db_path)
-    rp = ReflectionPool(db_path)
+    db = db_path
+    ps = PointerStore(db)
+    sm = SkillManager(db)
+    rp = ReflectionPool(db)
 
     ps.init_db()
     sm.init_db()
@@ -74,7 +75,7 @@ def init(db_path: Path) -> None:
     sm.close()
     rp.close()
 
-    click.echo(f"Database initialized at {db_path}")
+    click.echo(f"Database initialized at {db}")
 
 
 # ── pointer commands ────────────────────────────────────────────────────────────
@@ -86,13 +87,13 @@ def pointer() -> None:
     pass
 
 
-@pointer.command()
+@pointer.command(name="add")
 @click.argument("summary")
 @click.argument("url")
 @click.option("--tag", "-t", multiple=True, help="Tag (repeatable)")
 @click.option("--fallback", "-f", multiple=True, help="Fallback URL (repeatable)")
 @_db_opt
-def add(
+def pointer_add(
     summary: str,
     url: str,
     tag: tuple[str, ...],
@@ -106,16 +107,24 @@ def add(
     click.echo(f"Added pointer #{entry.id}: {entry.summary[:60]}")
 
 
-@pointer.command()
+@pointer.command(name="list")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
 @_db_opt
-def list(db_path: Path) -> None:
+def pointer_list(db_path: Path, as_json: bool) -> None:
     """List all pointer entries."""
     store = PointerStore(db_path)
     entries = store.list_all()
     store.close()
 
     if not entries:
-        click.echo("No pointers found.")
+        if as_json:
+            click.echo("[]")
+        else:
+            click.echo("No pointers found.")
+        return
+
+    if as_json:
+        click.echo(json.dumps([e.to_dict() for e in entries], indent=2, ensure_ascii=False))
         return
 
     for e in entries:
@@ -124,10 +133,10 @@ def list(db_path: Path) -> None:
         click.echo(f"[{e.id}] {e.summary[:70]} | tags: {tags_str} | {e.primary_url}{accessed}")
 
 
-@pointer.command()
+@pointer.command(name="search")
 @click.argument("keyword")
 @_db_opt
-def search(keyword: str, db_path: Path) -> None:
+def pointer_search(keyword: str, db_path: Path) -> None:
     """Full-text search pointer summaries."""
     store = PointerStore(db_path)
     entries = store.search_by_keyword(keyword)
@@ -142,10 +151,10 @@ def search(keyword: str, db_path: Path) -> None:
         click.echo(f"[{e.id}] {e.summary[:70]} | {e.primary_url}")
 
 
-@pointer.command()
+@pointer.command(name="get")
 @click.argument("pointer_id", type=int)
 @_db_opt
-def get(pointer_id: int, db_path: Path) -> None:
+def pointer_get(pointer_id: int, db_path: Path) -> None:
     """Get and display a pointer entry by id."""
     store = PointerStore(db_path)
     entry = store.get_pointer(pointer_id)
@@ -158,10 +167,10 @@ def get(pointer_id: int, db_path: Path) -> None:
     click.echo(json.dumps(entry.to_dict(), indent=2, ensure_ascii=False))
 
 
-@pointer.command()
+@pointer.command(name="delete")
 @click.argument("pointer_id", type=int)
 @_db_opt
-def delete(pointer_id: int, db_path: Path) -> None:
+def pointer_delete(pointer_id: int, db_path: Path) -> None:
     """Delete a pointer entry by id."""
     store = PointerStore(db_path)
     ok = store.delete_pointer(pointer_id)
@@ -183,13 +192,13 @@ def skill() -> None:
     pass
 
 
-@skill.command()
+@skill.command(name="add")
 @click.argument("name")
 @click.option("--summary", "-s", default="", help="Short summary")
 @click.option("--tag", "-t", multiple=True, help="Tag (repeatable)")
 @click.option("--code-path", default="", help="Path to skill code")
 @_db_opt
-def add(
+def skill_add(
     name: str,
     summary: str,
     tag: tuple[str, ...],
@@ -203,10 +212,11 @@ def add(
     click.echo(f"Added skill #{entry.id} '{entry.name}' (status: {entry.status.value})")
 
 
-@skill.command()
+@skill.command(name="list")
 @click.option("--status", "-s", type=click.Choice(["draft", "active", "deprecated", "archived"], case_sensitive=False))
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
 @_db_opt
-def list(db_path: Path, status: str | None) -> None:
+def skill_list(db_path: Path, status: str | None, as_json: bool) -> None:
     """List all skills, optionally filtered by status."""
     mgr = SkillManager(db_path)
     if status:
@@ -216,7 +226,14 @@ def list(db_path: Path, status: str | None) -> None:
     mgr.close()
 
     if not entries:
-        click.echo("No skills found.")
+        if as_json:
+            click.echo("[]")
+        else:
+            click.echo("No skills found.")
+        return
+
+    if as_json:
+        click.echo(json.dumps([e.to_dict() for e in entries], indent=2, ensure_ascii=False))
         return
 
     for e in entries:
@@ -224,10 +241,10 @@ def list(db_path: Path, status: str | None) -> None:
         click.echo(f"[{e.id}] {e.name} | v{e.version} | {e.status.value} | tags: {tags_str}")
 
 
-@skill.command()
+@skill.command(name="search")
 @click.argument("keyword")
 @_db_opt
-def search(keyword: str, db_path: Path) -> None:
+def skill_search(keyword: str, db_path: Path) -> None:
     """Search skills by name/summary."""
     mgr = SkillManager(db_path)
     entries = mgr.search(keyword)
@@ -241,10 +258,10 @@ def search(keyword: str, db_path: Path) -> None:
         click.echo(f"[{e.id}] {e.name} | v{e.version} | {e.status.value}")
 
 
-@skill.command()
+@skill.command(name="activate")
 @click.argument("skill_id", type=int)
 @_db_opt
-def activate(skill_id: int, db_path: Path) -> None:
+def skill_activate(skill_id: int, db_path: Path) -> None:
     """Activate a draft skill (draft → active)."""
     mgr = SkillManager(db_path)
     try:
@@ -257,10 +274,10 @@ def activate(skill_id: int, db_path: Path) -> None:
         raise SystemExit(1)
 
 
-@skill.command()
+@skill.command(name="deprecate")
 @click.argument("skill_id", type=int)
 @_db_opt
-def deprecate(skill_id: int, db_path: Path) -> None:
+def skill_deprecate(skill_id: int, db_path: Path) -> None:
     """Deprecate an active skill (active → deprecated)."""
     mgr = SkillManager(db_path)
     try:
@@ -273,10 +290,10 @@ def deprecate(skill_id: int, db_path: Path) -> None:
         raise SystemExit(1)
 
 
-@skill.command()
+@skill.command(name="archive")
 @click.argument("skill_id", type=int)
 @_db_opt
-def archive(skill_id: int, db_path: Path) -> None:
+def skill_archive(skill_id: int, db_path: Path) -> None:
     """Archive a deprecated skill (deprecated → archived)."""
     mgr = SkillManager(db_path)
     try:
@@ -289,10 +306,10 @@ def archive(skill_id: int, db_path: Path) -> None:
         raise SystemExit(1)
 
 
-@skill.command()
+@skill.command(name="upgrade")
 @click.argument("skill_id", type=int)
 @_db_opt
-def upgrade(skill_id: int, db_path: Path) -> None:
+def skill_upgrade(skill_id: int, db_path: Path) -> None:
     """Upgrade a skill (bump version patch-level)."""
     mgr = SkillManager(db_path)
     try:
@@ -314,14 +331,14 @@ def reflect() -> None:
     pass
 
 
-@reflect.command()
+@reflect.command(name="add")
 @click.argument("error_type")
 @click.argument("error_message")
 @click.option("--context", "-c", default="", help="Error context")
 @click.option("--lesson", "-l", default="", help="Lesson learned")
 @click.option("--skill-id", type=int, default=None, help="Related skill id")
 @_db_opt
-def add(
+def reflect_add(
     error_type: str,
     error_message: str,
     context: str,
@@ -342,11 +359,11 @@ def add(
     click.echo(f"Added reflection #{entry.id}")
 
 
-@reflect.command()
+@reflect.command(name="list")
 @click.option("--error-type", help="Filter by error type")
 @click.option("--skill-id", type=int, help="Filter by related skill id")
 @_db_opt
-def list(db_path: Path, error_type: str | None, skill_id: int | None) -> None:
+def reflect_list(db_path: Path, error_type: str | None, skill_id: int | None) -> None:
     """List reflection entries, optionally filtered."""
     pool = ReflectionPool(db_path)
     if error_type:
@@ -368,10 +385,10 @@ def list(db_path: Path, error_type: str | None, skill_id: int | None) -> None:
             click.echo(f"  → {e.lesson_learned[:80]}")
 
 
-@reflect.command()
+@reflect.command(name="search")
 @click.argument("keyword")
 @_db_opt
-def search(keyword: str, db_path: Path) -> None:
+def reflect_search(keyword: str, db_path: Path) -> None:
     """Search reflections by keyword."""
     pool = ReflectionPool(db_path)
     entries = pool.search_lessons(keyword)
@@ -388,7 +405,7 @@ def search(keyword: str, db_path: Path) -> None:
 # ── slim commands ───────────────────────────────────────────────────────────────
 
 
-@cli.command()
+@cli.command(name="slim")
 @click.option("--threshold", type=float, default=0.3, show_default=True, help="Minimum overlap score to report")
 @_db_opt
 def slim(threshold: float, db_path: Path) -> None:
@@ -415,7 +432,7 @@ def slim(threshold: float, db_path: Path) -> None:
 # ── fetch command ──────────────────────────────────────────────────────────────
 
 
-@cli.command()
+@cli.command(name="fetch")
 @click.argument("pointer_id", type=int)
 @click.option("--timeout", type=float, default=10.0, show_default=True)
 @_db_opt
@@ -442,7 +459,7 @@ def fetch(pointer_id: int, timeout: float, db_path: Path) -> None:
 # ── health command ─────────────────────────────────────────────────────────────
 
 
-@cli.command()
+@cli.command(name="health")
 @click.option("--timeout", type=float, default=5.0, show_default=True)
 @_db_opt
 def health(timeout: float, db_path: Path) -> None:
