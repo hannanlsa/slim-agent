@@ -302,6 +302,12 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 
+## Credits & Acknowledgments
+
+This project stands on the shoulders of others. See [CREDITS.md](CREDITS.md) for the full lineage — direct dependencies, design inspirations (OpenHuman, ARS, Superpowers, mattpocock/skills, ECC, agentmemory, OpenClaw), conceptual sources, and conversation sources. **The chain of ideas stays auditable so that future contributors can trace where every design decision came from.**
+
+---
+
 ## Roadmap — Cross-Platform
 
 **Stance**: This project explicitly scopes itself to **single-machine, local-first**. Cross-device, cross-user, cross-tool data flow is deferred to a future product layer that this Python library alone cannot provide.
