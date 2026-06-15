@@ -1,6 +1,6 @@
 """SLIM-Agent: Self-Learning Index Memory for AI agents."""
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 # Convenience re-exports so users can write `from slim_agent import PointerStore`
 # instead of the longer `from slim_agent.pointer_memory.store import PointerStore`.

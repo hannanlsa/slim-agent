@@ -64,3 +64,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [0.1.1]: https://github.com/hannanlsa/slim-agent/compare/0.1.0...0.1.1
 [0.1.0]: https://github.com/hannanlsa/slim-agent/releases/tag/0.1.0
+
+
+## [0.1.2] - 2026-06-15
+
+### Added
+- `tests/test_real_world.py` — 7 integration tests that exercise the 6 core
+  modules against real-world inputs (no mocking):
+  - Pointer with a realistic conversational snippet (Docker proxy discussion)
+  - URL fetcher against httpbin.org/html (real HTTP 200 + HTML stripping)
+  - URL fetcher against httpbin.org/status/404 (real 404 propagation)
+  - Health checker against httpbin.org/delay/3 with 1s timeout (timeout enforcement)
+  - Reducer with two semantically overlapping skills (suggests merge)
+  - Reflection pool with a real postmortem-style entry
+  - End-to-end: store pointer, then fetch its URL
+- `real_http` fixture in `tests/conftest.py` — temporarily disables the
+  session-level requests-mock for a single test, then re-enables it.
+- `_httpbin_alive()` helper + `@requires_httpbin` marker in test_real_world.py
+  to skip tests when httpbin.org is unreachable.
+- `pytestmark = skipif(not _HAS_NETWORK)` at module level — the entire
+  real-world suite is skipped if no internet is available (probes 1.1.1.1:53).
+- README §"Running Tests" now documents how to run or skip real-world tests.
+
+### Fixed
+- `PointerStore.add_pointer()` parameter is `primary_url`, not `url`.
+- `fetch_with_fallback()` requires `fallback_urls` as second positional arg.
+- `SlimReducer` only scans ACTIVE skills — `add_skill` defaults to DRAFT,
+  tests now call `sm.activate(skill_id)` explicitly.
+- `MergeSuggestion` exposes `skill_ids` (list[int]) and `skill_names` (list[str]),
+  not `skill_a` / `skill_b`.
+- `ReflectionPool.add()` signature is `(error_type, error_message, context, lesson_learned, related_skill_id)`,
+  not `(content=...)`.
+
+### Verified
+- 88/88 unit tests pass.
+- 4 real-world tests auto-skip when httpbin is unreachable.
+- `python -m build --sdist --wheel` produces installable artifacts.
+
+[0.1.2]: https://github.com/hannanlsa/slim-agent/compare/0.1.1...0.1.2

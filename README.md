@@ -281,7 +281,24 @@ pip install -e ".[dev]"
 python -m pytest tests/ -v
 ```
 
-All tests use temporary files/databases for isolation — no state leaks between tests.
+All unit tests use temporary files/databases for isolation — no state leaks between tests.
+
+### Real-world integration tests
+
+`tests/test_real_world.py` contains integration tests that hit **real public
+endpoints** (httpbin.org). These are auto-skipped if:
+- No internet is available (probes `1.1.1.1:53`)
+- httpbin.org is unreachable (probes `/get`)
+
+To run only the real-world tests:
+```bash
+python -m pytest tests/test_real_world.py -v
+```
+
+To skip them in CI (e.g. if your build server has no internet):
+```bash
+python -m pytest tests/ --ignore=tests/test_real_world.py
+```
 
 ---
 
