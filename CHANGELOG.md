@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-06-16
+
+### Added (Q3 + Q4 Integration)
+- `versioned_reflection/core.py`: 增量 diff 版本管理经验沉淀 (Q3)
+  - 每次 update 生成 unified diff patch 存入 `<slug>.history/v{N}.{ts}.patch`
+  - rollback 通过纯 Python `_apply_patches_to_empty` 重建
+  - 版本号永远递增（避免 patch 链冲突）
+  - `_rebuild_index` 兜底：JSON 索引损坏时从 reflections/ 扫描重建
+- `versioned_reflection/__init__.py`: 公开 API
+- `problem_solving/core.py`: 4 步流程协调器 (Q4)
+  - `learn_problem` / `learn_manual` / `learn_from_error` / `record_evolution`
+  - 4 类 source 标签：agent / error / manual / evolution
+  - 可选 `websearch_fn` 注入，CLI 默认 None
+- `problem_solving/__init__.py`: 公开 API
+- 4 步流程：记录问题 → 根源追踪 → 学习验证 → 沉淀（reflection_pool + evolution-tracker.jsonl）
+- 25 new tests (16 versioned_reflection + 9 problem_solving), all passing
+
+### Changed
+- 总测试数 90 → 116 (passed, +4 skipped 不变)
+- 验证 Q3 + Q4 端到端：create → update → rollback → diff → get 全链路
+
+### Docs
+- 待补：README + SKILL + CREDITS 补 Q3/Q4 章节
+- 待补：CHANGELOG v0.1.6/v0.1.7 之前条目已在 git log
+
 ## [0.1.8] - 2026-06-16
 
 ### Added
