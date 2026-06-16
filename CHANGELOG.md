@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SKILL.md: 同上 🔒 Evolution Direction
 - CREDITS.md: 补充和Gemini对话产出四大 pillars 的来源
 - 版本号: 0.1.6 → 0.1.8
+- 新增第五个目标进化方向「问题驱动学习」（README.md + SKILL.md）
 
 ## [0.1.7] - 2026-06-16
 
