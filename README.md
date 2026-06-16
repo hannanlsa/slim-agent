@@ -34,10 +34,10 @@ SLIM-Agent solves both:
 
 ---
 
-## 🔒 Evolution Direction (锁定进化方向)
+## 🎯 Evolution Direction (目标进化方向)
 
 > **Last updated**: 2026-06-16 · **Owner**: 潘笑
-> This section is the **binding contract** for the project's long-term direction. All code changes, feature additions, and architectural decisions must align with these four pillars. Deviations require explicit owner approval.
+> 所有学习知识和技术改进都**围绕这四个方向**展开。只有与这四个方向相关的提升才值得改动。
 
 slim-agent's development is locked to **four evolution pillars**, inspired by how the human brain manages knowledge:
 
@@ -48,13 +48,20 @@ slim-agent's development is locked to **four evolution pillars**, inspired by ho
 | **3. 技能迭代 — ReflectionPool 记录教训** | 🔧 待完善 | `reflection_pool/` 已有；缺少 **skill 版本管理**（生命周期内版本追踪） |
 | **4. 瘦身功能 — SlimReducer 去重合并建议** | ✅ 核心功能 | `slim_reducer/` (v0.1.8: BM25 + RRF 多信号融合) |
 
-### What this means for contributors
+### 核心原则
 
-- ✅ **Always welcome**: anything that strengthens the 4 pillars above
-- ✅ **Always welcome**: performance improvements, bug fixes, test coverage, docs
-- ❌ **Not in scope**: cloud sync, multi-user auth, proprietary storage formats, UI dashboards
-- ❌ **Not in scope**: features that store full text/payloads locally (violates Pillar 2)
-- ❌ **Not in scope**: features that auto-modify skills without human/AI approval (violates SlimReducer conservative-only design)
+slim-agent 的所有学习、知识积累和技术改进，都**围绕这四个方向**展开：
+
+| Pillar | Status | Implementation |
+|--------|--------|---------------|
+| **1. 模拟人脑 — SimHash 指纹 + PointerStore 指针** | ✅ 已有雏形 | `simhash.py` (BLAKE2b 64-bit fingerprint) + `pointer_memory/` (summary + URL, no payload) |
+| **2. 本地储存减少 — 互联网指针按需拉取** | ✅ 已有雏形 | `PointerStore` 只存 key-value，`URLFetcher` 现用现拉，不存全文 |
+| **3. 技能迭代 — ReflectionPool 记录教训** | 🔧 待完善 | `reflection_pool/` 已有；缺少 **skill 版本管理**（生命周期内版本追踪） |
+| **4. 瘦身功能 — SlimReducer 去重合并建议** | ✅ 核心功能 | `slim_reducer/` (v0.1.8: BM25 + RRF 多信号融合) |
+
+> **判断标准**：一个改动是否值得做，取决于它是否在这四个方向上有实质提升。只有与目标进化方向相关的学习成果才被采纳。
+
+### 贡献边界（参考，非硬性锁死）
 
 ### 版本演进规则（每一次改动后升级版本号）
 
