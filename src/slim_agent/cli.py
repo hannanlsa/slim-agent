@@ -20,7 +20,16 @@ from slim_agent.url_fetcher.health import batch_check
 
 
 def _db_path(ctx: click.Context, param: click.Parameter, value: str | None) -> Path:
-    return Path(value or "slim_agent.db")
+    """Resolve --db option value, falling back to parent's value.
+
+    Click 8 does not auto-propagate root-level options to subcommands,
+    so this callback walks the context chain to find an inherited value.
+    """
+    if value is not None:
+        return Path(value)
+    if ctx.parent and "db_path" in ctx.parent.params:
+        return Path(ctx.parent.params["db_path"])
+    return Path("slim_agent.db")
 
 
 def _store(ctx: click.Context, param: click.Parameter, value: str | None) -> PointerStore:
@@ -53,16 +62,17 @@ _db_opt = click.option(
 
 @click.group()
 @click.version_option(version=__version__)
-def cli() -> None:
+@_db_opt
+def cli(db_path: Path) -> None:
     """SLIM-Agent: Self-Learning Index Memory for AI agents."""
     pass
 
 
 @cli.command(name="init")
-@_db_opt
-def init(db_path: Path) -> None:
+@click.pass_context
+def init(ctx: click.Context) -> None:
     """Initialize all database tables."""
-    db = db_path
+    db = Path(ctx.parent.params.get("db_path") or "slim_agent.db")
     ps = PointerStore(db)
     sm = SkillManager(db)
     rp = ReflectionPool(db)

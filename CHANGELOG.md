@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] - 2026-06-16
+
+### Added
+- OpenClaw skill packaging (`~/.qclaw/skills/slim-agent/`):
+  - `SKILL.md`: trigger words, anti-triggers, companion skills, Python API reference
+  - `__init__.py`: `is_available()`, `version()`, `auto_detect()`, `self_test()`
+- CREDITS.md documenting cross-repo idea lineage
+
+### Changed
+- PyPI production release (v0.1.5 → v0.1.6)
+
 ## [0.1.1] - 2026-06-15
 
 ### Added
