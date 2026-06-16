@@ -160,3 +160,103 @@ class TestMergeSuggestion:
         d = suggestion.__dict__
         assert d["skill_ids"] == [1, 2]
         assert d["overlap_score"] == 0.75
+
+
+class TestBM25:
+    """Tests for BM25 keyword matching signal."""
+
+    def test_from_skills_empty(self):
+        from slim_agent.slim_reducer.bm25 import BM25Index
+        idx = BM25Index.from_skills([])
+        assert idx.total_docs == 0
+
+    def test_from_skills_basic(self):
+        from slim_agent.slim_reducer.bm25 import BM25Index
+
+        class FakeSkill:
+            def __init__(self, sid, summary):
+                self.id = sid
+                self.summary = summary
+
+        skills = [
+            FakeSkill(1, "python web scraping tool"),
+            FakeSkill(2, "python web fetching library"),
+            FakeSkill(3, "rust systems programming"),
+        ]
+        idx = BM25Index.from_skills(skills)
+        assert idx.total_docs == 3
+        assert idx.avg_doc_len > 0
+        # python web 应该在 doc 1 和 2 中出现
+        assert idx.df["python"] == 2
+        assert idx.df["rust"] == 1
+
+    def test_score_pair_similar(self):
+        from slim_agent.slim_reducer.bm25 import BM25Index
+
+        class FakeSkill:
+            def __init__(self, sid, summary):
+                self.id = sid
+                self.summary = summary
+
+        skills = [
+            FakeSkill(1, "web page fetching tool for scraping"),
+            FakeSkill(2, "web page fetching library for data extraction"),
+            FakeSkill(3, "cooking recipes and meal planning"),
+        ]
+        idx = BM25Index.from_skills(skills)
+        sim_ab = idx.score_pair(1, 2)  # 相似
+        sim_ac = idx.score_pair(1, 3)  # 不相似
+        assert sim_ab > sim_ac
+
+    def test_score_pair_returns_zero_for_missing(self):
+        from slim_agent.slim_reducer.bm25 import BM25Index
+        idx = BM25Index.from_skills([])
+        assert idx.score_pair(999, 888) == 0.0
+
+
+class TestRRF:
+    """Tests for RRF score fusion."""
+
+    def test_rrf_combine_basic(self):
+        from slim_agent.slim_reducer.rrf import rrf_combine
+        signals = {
+            (1, 2): [{'name': 'tag', 'score': 0.5, 'weight': 1.0}],
+            (3, 4): [{'name': 'tag', 'score': 0.8, 'weight': 1.0}],
+        }
+        result = rrf_combine(signals)
+        assert (1, 2) in result
+        assert (3, 4) in result
+        # 更多/更高权重信号 → 更高 RRF 分数
+        assert result[(3, 4)] > 0
+
+    def test_rrf_combine_multiple_signals(self):
+        from slim_agent.slim_reducer.rrf import rrf_combine
+        signals = {
+            (1, 2): [
+                {'name': 'tag', 'score': 0.5, 'weight': 1.0},
+                {'name': 'bm25', 'score': 0.7, 'weight': 1.5},
+                {'name': 'simhash', 'score': 0.9, 'weight': 1.0},
+            ],
+            (3, 4): [
+                {'name': 'tag', 'score': 0.5, 'weight': 1.0},
+            ],
+        }
+        result = rrf_combine(signals)
+        # 3 信号 > 1 信号 → 更高 RRF 分数
+        assert result[(1, 2)] > result[(3, 4)]
+
+    def test_rrf_combine_empty(self):
+        from slim_agent.slim_reducer.rrf import rrf_combine
+        assert rrf_combine({}) == {}
+
+    def test_rrf_combine_pairs_ranks(self):
+        from slim_agent.slim_reducer.rrf import rrf_combine_pairs
+        pairs = [
+            ("a", "b", [{'name': 's1', 'score': 0.9, 'weight': 1.0}]),
+            ("c", "d", [{'name': 's1', 'score': 0.9, 'weight': 1.0},
+                         {'name': 's2', 'score': 0.8, 'weight': 1.0}]),
+        ]
+        ranked = rrf_combine_pairs(pairs)
+        assert len(ranked) == 2
+        # 2 信号应该排在 1 信号前面
+        assert ranked[0][0] > ranked[1][0]

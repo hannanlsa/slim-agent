@@ -15,16 +15,21 @@ from slim_agent.slim_reducer.loop_detector import LoopDetector
 class SlimReducer:
     """Scan active skills for redundancy and produce merge suggestions.
 
-    Three signals, combined (via SignalRegistry):
+    Three signals + BM25, combined via RRF (借鉴 Qdrant):
       1. Tag Jaccard (default threshold 0.3)
       2. Summary word Jaccard (default threshold 0.5)
       3. Summary SimHash similarity (default threshold 0.65)
+      4. BM25 keyword matching (threshold 0.15, 借鉴 Qdrant lib/bm25/)
+
+    Score fusion: RRF (Reciprocal Rank Fusion, 借鉴 Qdrant)
 
     Conservative: only suggests, never modifies. Human/AI must approve actions.
 
     v0.1.7: signals 动态注册/禁用 via SignalRegistry
     v0.1.7: 渐进式循环检测 via LoopDetector
     v0.1.7: 合并建议分级 (info/warning/critical)
+    v0.1.8: BM25 keyword matching (借鉴 Qdrant lib/bm25/)
+    v0.1.8: RRF score fusion (借鉴 Qdrant RRF)
     """
 
     def __init__(
@@ -53,8 +58,13 @@ class SlimReducer:
         for s in active:
             s._simhash_fp = fingerprints[s.id]
 
+        # Pre-build BM25 index (借鉴 Qdrant embed 阶段)
+        from slim_agent.slim_reducer.bm25 import BM25Index
+        bm25_idx = BM25Index.from_skills(active)
+
         checked: set[tuple[int, int]] = set()
         suggestions: list[MergeSuggestion] = []
+        candidate_pairs: list[tuple[Any, Any, list[dict]]] = []
 
         for i, skill in enumerate(active):
             for other in active[i + 1:]:
@@ -68,24 +78,42 @@ class SlimReducer:
                 if not hits:
                     continue
 
-                # Combined overlap = max of all signal scores
-                overlap_score = max(h['score'] for h in hits)
+                # BM25 信号（单独计算，不在 registry 中以避免 index 依赖）
+                from slim_agent.slim_reducer.bm25 import bm25_signal
+                bm25_score = bm25_signal(skill, other, index=bm25_idx)
+                if bm25_score >= 0.15:
+                    hits.append({
+                        'name': 'bm25',
+                        'score': round(bm25_score, 4),
+                        'threshold': 0.15,
+                        'weight': 1.5,  # BM25 权重略高（借鉴 Qdrant hybrid search）
+                    })
 
-                # 渐进式分级
-                severity = self._classify_severity(overlap_score)
+                if not hits:
+                    continue
 
-                # 生成 reason
-                signal_strs = [f"{h['name']}={h['score']:.2f}" for h in hits]
-                shared_tags = sorted(set(skill.tags or []) & set(other.tags or []))
+                candidate_pairs.append((skill, other, hits))
 
-                suggestions.append(MergeSuggestion(
-                    skill_ids=[skill.id, other.id],
-                    skill_names=[skill.name, other.name],
-                    shared_tags=shared_tags,
-                    overlap_score=round(overlap_score, 3),
-                    reason=f"Overlap signals: {', '.join(signal_strs)}. Shared tags: {len(shared_tags)}",
-                    severity=severity,
-                ))
+        # RRF 融合（借鉴 Qdrant prefetch+rescore 两阶段）
+        from slim_agent.slim_reducer.rrf import rrf_combine_pairs
+        ranked = rrf_combine_pairs(candidate_pairs)
+
+        for rrf_score, (skill, other), hits in ranked:
+            # 渐进式分级
+            severity = self._classify_severity(rrf_score)
+
+            # 生成 reason
+            signal_strs = [f"{h['name']}={h['score']:.2f}" for h in hits]
+            shared_tags = sorted(set(skill.tags or []) & set(other.tags or []))
+
+            suggestions.append(MergeSuggestion(
+                skill_ids=[skill.id, other.id],
+                skill_names=[skill.name, other.name],
+                shared_tags=shared_tags,
+                overlap_score=round(rrf_score, 3),
+                reason=f"Overlap signals (RRF={rrf_score:.3f}): {', '.join(signal_strs)}. Shared tags: {len(shared_tags)}",
+                severity=severity,
+            ))
 
         report.suggestions = suggestions
 
