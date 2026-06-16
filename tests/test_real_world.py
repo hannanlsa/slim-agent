@@ -231,7 +231,7 @@ def test_reducer_flags_overlapping_skills(workspace: dict) -> None:
     sm.activate(entry1.id)
     sm.activate(entry2.id)
 
-    reducer = SlimReducer(sm, threshold=0.3)
+    reducer = SlimReducer(sm)  # threshold now in registry
     report = reducer.scan_skills()
 
     assert report.active_skill_count == 2

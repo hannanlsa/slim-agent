@@ -8,51 +8,34 @@ from typing import Any
 from slim_agent.skill_manager.manager import SkillManager
 from slim_agent.skill_manager.models import SkillEntry, SkillStatus
 from slim_agent.slim_reducer.models import MergeSuggestion, RedundancyReport
-from slim_agent.slim_reducer.simhash import simhash, simhash_similarity
-
-
-# Minimum Jaccard-like overlap score to suggest a merge (0.0–1.0)
-_DEFAULT_THRESHOLD = 0.3
-# SimHash similarity threshold (above this, two summaries are near-duplicates)
-_DEFAULT_SIMHASH_THRESHOLD = 0.65
-
-
-def _jaccard(a: set[str], b: set[str]) -> float:
-    if not a and not b:
-        return 0.0
-    inter = len(a & b)
-    union = len(a | b)
-    return inter / union if union else 0.0
-
-
-def _summary_similarity(a: str, b: str) -> float:
-    """Word-overlap Jaccard on normalised tokens (English-friendly baseline)."""
-    tokens_a = set(a.lower().split())
-    tokens_b = set(b.lower().split())
-    return _jaccard(tokens_a, tokens_b)
+from slim_agent.slim_reducer.registry import SignalRegistry, create_default_registry
+from slim_agent.slim_reducer.loop_detector import LoopDetector
 
 
 class SlimReducer:
     """Scan active skills for redundancy and produce merge suggestions.
 
-    Three signals, combined:
-      1. Tag Jaccard (threshold-controlled)
-      2. Summary word Jaccard (CJK-fragile, kept for back-compat)
-      3. Summary SimHash similarity (CJK + typo + paraphrase robust)
+    Three signals, combined (via SignalRegistry):
+      1. Tag Jaccard (default threshold 0.3)
+      2. Summary word Jaccard (default threshold 0.5)
+      3. Summary SimHash similarity (default threshold 0.65)
 
     Conservative: only suggests, never modifies. Human/AI must approve actions.
+
+    v0.1.7: signals 动态注册/禁用 via SignalRegistry
+    v0.1.7: 渐进式循环检测 via LoopDetector
+    v0.1.7: 合并建议分级 (info/warning/critical)
     """
 
     def __init__(
         self,
         skill_manager: SkillManager,
-        threshold: float = _DEFAULT_THRESHOLD,
-        simhash_threshold: float = _DEFAULT_SIMHASH_THRESHOLD,
+        registry: SignalRegistry | None = None,
+        loop_detector: LoopDetector | None = None,
     ) -> None:
         self.sm = skill_manager
-        self.threshold = threshold
-        self.summary_threshold = threshold * 5 / 3
-        self.simhash_threshold = simhash_threshold
+        self.registry = registry or create_default_registry()
+        self.loop_detector = loop_detector or LoopDetector()
 
     def scan_skills(self) -> RedundancyReport:
         """Scan all ACTIVE skills and return a RedundancyReport."""
@@ -62,71 +45,66 @@ class SlimReducer:
         if len(active) < 2:
             return report
 
-        # Pre-compute SimHash fingerprints for all summaries (avoids recomputation per pair)
-        fingerprints = {s.id: simhash(s.summary or "") for s in active}  # type: ignore
+        # Pre-compute SimHash fingerprints (性能优化，保留)
+        from slim_agent.slim_reducer.simhash import simhash
+        fingerprints = {s.id: simhash(s.summary or "") for s in active}
 
-        # Group by tags for fast lookup
-        tag_map: dict[str, list[SkillEntry]] = defaultdict(list)
+        # Inject fingerprints into entries for registry signals
         for s in active:
-            for tag in s.tags:
-                tag_map[tag].append(s)
+            s._simhash_fp = fingerprints[s.id]
 
         checked: set[tuple[int, int]] = set()
         suggestions: list[MergeSuggestion] = []
 
         for i, skill in enumerate(active):
-            for other in active[i + 1 :]:
-                pair = tuple(sorted([skill.id, other.id]))  # type: ignore
+            for other in active[i + 1:]:
+                pair = tuple(sorted([skill.id, other.id]))
                 if pair in checked:
                     continue
                 checked.add(pair)
 
-                # Tag overlap
-                tags_a = set(skill.tags)
-                tags_b = set(other.tags)
-                tag_score = _jaccard(tags_a, tags_b)
-                shared_tags = sorted(tags_a & tags_b)
-
-                # Summary word-Jaccard (English baseline)
-                summary_score = _summary_similarity(skill.summary, other.summary)
-
-                # Summary SimHash (CJK + paraphrase robust)
-                sh_score = simhash_similarity(
-                    fingerprints[skill.id],  # type: ignore
-                    fingerprints[other.id],  # type: ignore
-                )
-
-                # Combined overlap = max of three signals
-                overlap_score = max(tag_score, summary_score, sh_score)
-
-                # Trigger on any signal above its threshold
-                tag_hit = tag_score >= self.threshold
-                summary_hit = summary_score >= self.summary_threshold
-                simhash_hit = sh_score >= self.simhash_threshold
-                if not (tag_hit or summary_hit or simhash_hit):
+                # 用 Registry 评估所有信号
+                hits = self.registry.evaluate(skill, other)
+                if not hits:
                     continue
 
-                # Build a reason listing which signals fired
-                signals = []
-                if tag_hit:
-                    signals.append(f"tag Jaccard={tag_score:.2f}")
-                if summary_hit:
-                    signals.append(f"word Jaccard={summary_score:.2f}")
-                if simhash_hit:
-                    signals.append(f"simhash={sh_score:.2f}")
+                # Combined overlap = max of all signal scores
+                overlap_score = max(h['score'] for h in hits)
 
-                suggestions.append(
-                    MergeSuggestion(
-                        skill_ids=[skill.id, other.id],  # type: ignore
-                        skill_names=[skill.name, other.name],
-                        shared_tags=shared_tags,
-                        overlap_score=round(overlap_score, 3),
-                        reason=(
-                            f"Overlap signals: {', '.join(signals)}. "
-                            f"Shared tags: {len(shared_tags)}"
-                        ),
-                    )
-                )
+                # 渐进式分级
+                severity = self._classify_severity(overlap_score)
+
+                # 生成 reason
+                signal_strs = [f"{h['name']}={h['score']:.2f}" for h in hits]
+                shared_tags = sorted(set(skill.tags or []) & set(other.tags or []))
+
+                suggestions.append(MergeSuggestion(
+                    skill_ids=[skill.id, other.id],
+                    skill_names=[skill.name, other.name],
+                    shared_tags=shared_tags,
+                    overlap_score=round(overlap_score, 3),
+                    reason=f"Overlap signals: {', '.join(signal_strs)}. Shared tags: {len(shared_tags)}",
+                    severity=severity,
+                ))
 
         report.suggestions = suggestions
+
+        # 循环检测：如果连续产生相同建议
+        if report.suggestions:
+            fp = ",".join(sorted(str(s.skill_ids) for s in report.suggestions))
+            nudge = self.loop_detector.check("scan", fp)
+            if nudge.level != 'ok':
+                report.nudge = nudge.message
+
         return report
+
+    @staticmethod
+    def _classify_severity(score: float) -> str:
+        """渐进式分级"""
+        if score >= 0.8:
+            return 'critical'   # 几乎重复，强烈建议合并
+        if score >= 0.5:
+            return 'warning'    # 有明显重叠
+        if score >= 0.3:
+            return 'info'        # 轻微重叠
+        return 'ok'

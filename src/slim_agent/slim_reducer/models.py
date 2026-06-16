@@ -16,6 +16,7 @@ class MergeSuggestion:
     shared_tags: list[str]
     overlap_score: float
     reason: str
+    severity: str = "info"  # 'ok' | 'info' | 'warning' | 'critical'
 
 
 @dataclass
@@ -25,6 +26,8 @@ class RedundancyReport:
     suggestions: list[MergeSuggestion] = field(default_factory=list)
     scanned_at: datetime = field(default_factory=lambda: datetime.now())
     active_skill_count: int = 0
+
+    nudge: str = ""  # LoopDetector 注入的循环提示
 
     @property
     def has_overlaps(self) -> bool:

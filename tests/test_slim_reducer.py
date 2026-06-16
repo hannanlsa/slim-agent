@@ -27,7 +27,7 @@ def mgr(db_path):
 
 @pytest.fixture
 def reducer(mgr):
-    return SlimReducer(mgr, threshold=0.3)
+    return SlimReducer(mgr)  # threshold now in registry (default 0.3)
 
 
 class TestSlimReducer:
@@ -121,7 +121,7 @@ class TestSlimReducer:
         report = reducer.scan_skills()
         assert report.has_overlaps is True
         reason = report.suggestions[0].reason
-        assert "tag Jaccard" in reason
+        assert "tag_jaccard" in reason
 
 
 class TestRedundancyReport:
