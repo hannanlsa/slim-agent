@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8] - 2026-06-16
+
+### Added
+- `slim_reducer/bm25.py`: BM25 TF/IDF keyword matching signal (借鉴 Qdrant lib/bm25/)
+- `slim_reducer/rrf.py`: RRF Reciprocal Rank Fusion scorer (借鉴 Qdrant lib/collection/)
+- 8 new tests (4 BM25 + 4 RRF), all passing
+
+### Changed
+- `slim_reducer/reducer.py`: 预建 BM25 index + RRF 融合替代 max(score)
+- `slim_reducer/reducer.py`: BM25 作为第 4 信号 (threshold=0.15, weight=1.5)
+- `reducer.py` reason 字段标注 RRF 分数
+
+### Docs
+- README.md: 新增 🔒 Evolution Direction 章节 (四大 pillars 锁定)
+- SKILL.md: 同上 🔒 Evolution Direction
+- CREDITS.md: 补充和Gemini对话产出四大 pillars 的来源
+- 版本号: 0.1.6 → 0.1.8
+
+## [0.1.7] - 2026-06-16
+
+### Added
+- `slim_reducer/registry.py`: SignalRegistry (动态信号注册/禁用/求值)
+- `slim_reducer/loop_detector.py`: LoopDetector (渐进式循环检测 nudge)
+- `models.py`: `MergeSuggestion.severity` 字段 (info/warning/critical)
+- `models.py`: `RedundancyReport.active_skill_count` 字段
+
+### Changed
+- `reducer.py`: 硬编码信号 → SignalRegistry 动态信号
+- `scan_skills()`: 渐进式 severity 分级替代单一阈值
+- 版本号: 0.1.6 → 0.1.7
+
 ## [0.1.6] - 2026-06-16
 
 ### Added
