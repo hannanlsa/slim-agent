@@ -10,7 +10,7 @@ SLIM-Agent = **Self-Learning Index Memory**. A Python library that gives AI agen
 2. **Skill lifecycle** — track skills through `draft → active → deprecated → archived`
 3. **Reflection pool** — append-only log of lessons from errors/failures
 4. **Slim reducer** — conservative scanner that detects redundant skills and *suggests* merges (never auto-modifies)
-5. **目标进化方向** — four pillars: SimHash fingerprint + PointerStore | Local minimize + internet pointers | Skill iteration | Slim reducer
+5. **目标进化方向** — five pillars: SimHash fingerprint + PointerStore | Local minimize + internet pointers | Skill iteration | Slim reducer | Problem-driven learning
 
 ## Architecture
 
@@ -52,6 +52,7 @@ slim-agent/
 | **2. 本地储存减少 — 互联网指针按需拉取** | ✅ 已有雏形 | `PointerStore` key-value + `URLFetcher` 现用现拉 |
 | **3. 技能迭代 — ReflectionPool 记录教训** | 🔧 待完善 | `reflection_pool/` 已有；缺 skill 版本管理 |
 | **4. 瘦身功能 — SlimReducer 去重合并建议** | ✅ 核心功能 | v0.1.8: BM25 + RRF 多信号融合 |
+| **5. 问题驱动学习 — 遇到问题找根源、学验证、沉淀到项目** | 🆕 新方向 | `reflection_pool/` 已有教训记录 + 增强问题追踪模块（待建） |
 
 **判断标准**：一个改动是否值得做，取决于它是否在这四个方向上有实质提升。
 
