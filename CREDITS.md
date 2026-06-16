@@ -122,7 +122,7 @@ These are ideas that don't map to specific files but shape the project's stance.
 
 | Conversation | Date | What was discussed |
 |--------------|------|-------------------|
-| **和Gemini的问答.docx** | 2026-06-15 | The brainstorming conversation that gave rise to the SLIM-Agent concept (Self-Learning Index Memory). Originally between the author and Gemini. |
+| **和Gemini的问答.docx** | 2026-06-15 | The brainstorming conversation that gave rise to the SLIM-Agent concept (Self-Learning Index Memory). The conversation also produced the **four evolution pillars** (锁定进化方向) that now permanently guide this project: (1) SimHash fingerprint + PointerStore, (2) Local minimize + internet pointers, (3) Skill iteration, (4) Slim reducer. These four pillars are now codified in README.md and SKILL.md as the binding contract for the project's direction. |
 | **OpenClaw / QClaw session logs** | 2026-05-23 onward | Architectural decisions on skill ecosystem, dispatcher patterns, agent-sort philosophy, and the "Copilot Not Pilot" stance. |
 
 ---

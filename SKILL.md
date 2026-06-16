@@ -1,6 +1,6 @@
 # SKILL.md — SLIM-Agent
 
-**Project**: slim-agent · **Version**: 0.1.0 · **Python**: ≥3.10
+**Project**: slim-agent · **Version**: 0.1.8 · **Python**: ≥3.10 · **Tests**: 114 passed
 
 ## What It Is
 
@@ -10,6 +10,7 @@ SLIM-Agent = **Self-Learning Index Memory**. A Python library that gives AI agen
 2. **Skill lifecycle** — track skills through `draft → active → deprecated → archived`
 3. **Reflection pool** — append-only log of lessons from errors/failures
 4. **Slim reducer** — conservative scanner that detects redundant skills and *suggests* merges (never auto-modifies)
+5. **Evolution Direction (锁定)** — four pillars: SimHash fingerprint + PointerStore | Local minimize + internet pointers | Skill iteration | Slim reducer
 
 ## Architecture
 
@@ -38,6 +39,26 @@ slim-agent/
 | Append-only reflection | Audit trail; no update/delete |
 | Slim reducer = suggest only | Human/AI must approve merges |
 | `requests` + stdlib HTML parsing | Minimal deps; no heavy HTML lib required |
+| SignalRegistry (v0.1.7+) | 动态信号注册，支持新增信号而不改核心代码 |
+| RRF score fusion (v0.1.8) | 多信号排名融合，替代简单 max(score) |
+
+## 🔒 Evolution Direction (锁定进化方向)
+
+> This section is the **binding contract** for slim-agent's long-term direction.
+
+| Pillar | Status | Implementation |
+|--------|--------|---------------|
+| **1. 模拟人脑 — SimHash 指纹 + PointerStore 指针** | ✅ 已有雏形 | `simhash.py` + `pointer_memory/` |
+| **2. 本地储存减少 — 互联网指针按需拉取** | ✅ 已有雏形 | `PointerStore` key-value + `URLFetcher` 现用现拉 |
+| **3. 技能迭代 — ReflectionPool 记录教训** | 🔧 待完善 | `reflection_pool/` 已有；缺 skill 版本管理 |
+| **4. 瘦身功能 — SlimReducer 去重合并建议** | ✅ 核心功能 | v0.1.8: BM25 + RRF 多信号融合 |
+
+**版本演进规则**：
+- patch (x.y.**z**+1): Bug 修复、文档
+- minor (x.**y**.0+1): 新增功能（向后兼容）、新增 pillars 功能
+- major (**x**.0.0+1): 破坏性变更、删除 pillars 功能
+
+**借鉴规则**：每次新增功能须注明 `CREDITS.md` 中已记录的来源。v0.1.8: BM25 借鉴 Qdrant lib/bm25/，RRF 借鉴 Qdrant lib/collection/。
 
 ## CLI Quick Reference
 

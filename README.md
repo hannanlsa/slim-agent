@@ -4,6 +4,7 @@
 
 [![Python ≥3.10](https://img.shields.io/badge/python-%E2%89%A53.10-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Version 0.1.8](https://img.shields.io/badge/version-0.1.8-blue)](CHANGELOG.md)
 
 ---
 
@@ -30,6 +31,44 @@ SLIM-Agent solves both:
 - **Pointers instead of text** — summary + URL; fetch live when needed
 - **Skill lifecycle** — explicit states prevent zombie skills from cluttering the system
 - **Self-slimming** — the reducer finds overlaps and suggests consolidation
+
+---
+
+## 🔒 Evolution Direction (锁定进化方向)
+
+> **Last updated**: 2026-06-16 · **Owner**: 潘笑
+> This section is the **binding contract** for the project's long-term direction. All code changes, feature additions, and architectural decisions must align with these four pillars. Deviations require explicit owner approval.
+
+slim-agent's development is locked to **four evolution pillars**, inspired by how the human brain manages knowledge:
+
+| Pillar | Status | Implementation |
+|--------|--------|---------------|
+| **1. 模拟人脑 — SimHash 指纹 + PointerStore 指针** | ✅ 已有雏形 | `simhash.py` (BLAKE2b 64-bit fingerprint) + `pointer_memory/` (summary + URL, no payload) |
+| **2. 本地储存减少 — 互联网指针按需拉取** | ✅ 已有雏形 | `PointerStore` 只存 key-value，`URLFetcher` 现用现拉，不存全文 |
+| **3. 技能迭代 — ReflectionPool 记录教训** | 🔧 待完善 | `reflection_pool/` 已有；缺少 **skill 版本管理**（生命周期内版本追踪） |
+| **4. 瘦身功能 — SlimReducer 去重合并建议** | ✅ 核心功能 | `slim_reducer/` (v0.1.8: BM25 + RRF 多信号融合) |
+
+### What this means for contributors
+
+- ✅ **Always welcome**: anything that strengthens the 4 pillars above
+- ✅ **Always welcome**: performance improvements, bug fixes, test coverage, docs
+- ❌ **Not in scope**: cloud sync, multi-user auth, proprietary storage formats, UI dashboards
+- ❌ **Not in scope**: features that store full text/payloads locally (violates Pillar 2)
+- ❌ **Not in scope**: features that auto-modify skills without human/AI approval (violates SlimReducer conservative-only design)
+
+### 版本演进规则（每一次改动后升级版本号）
+
+| 改动类型 | 版本号规则 |
+|---------|----------|
+| Bug 修复、文档更新 | patch: x.y.**z** += 1 |
+| 新增信号/CLI 命令（向后兼容） | minor: x.**y**.0 += 1 |
+| 破坏性变更（表结构/CLI 接口） | major: **x**.0.0 += 1 |
+| 新增 pillars 中的功能 | minor: x.y.0 += 1 |
+| 删除/废弃 pillars 中的功能 | major: x.0.0 += 1 |
+
+> **All improvements must credit their inspirations**. See `CREDITS.md`.
+
+---
 
 ---
 
@@ -107,11 +146,17 @@ slim-agent/
 │   │   └── pool.py           # ReflectionPool: add/query/search
 │   ├── slim_reducer/         # Conservative redundancy scanner
 │   │   ├── models.py         # MergeSuggestion, RedundancyReport
-│   │   └── reducer.py        # SlimReducer.scan_skills()
+│   │   ├── reducer.py        # SlimReducer.scan_skills()
+│   │   ├── registry.py       # SignalRegistry (动态信号注册)
+│   │   ├── loop_detector.py  # LoopDetector (渐进式循环检测)
+│   │   ├── simhash.py        # BLAKE2b 64-bit SimHash
+│   │   ├── bm25.py           # BM25 keyword matching (借鉴 Qdrant)
+│   │   └── rrf.py            # RRF Reciprocal Rank Fusion (借鉴 Qdrant)
 │   └── cli.py                # Click CLI (slim init/pointer/skill/reflect/slim/fetch/health)
-├── tests/                    # pytest test suite
+├── tests/                    # pytest test suite (114 passed)
+├── schema/                   # JSON schema (跨平台接口契约)
 ├── pyproject.toml
-├── SKILL.md                   # For AI agents
+├── SKILL.md                  # For AI agents
 └── README.md
 ```
 
