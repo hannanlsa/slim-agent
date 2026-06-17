@@ -191,8 +191,8 @@ class SkillManager:
             )
         return self._transition(sid, SkillStatus.ARCHIVED)
 
-    def upgrade(self, sid: int) -> SkillEntry:
-        """Bump version patch-level and link to the previous parent (or self if first upgrade)."""
+    def upgrade(self, sid: int, reason: str = "") -> SkillEntry:
+        """Bump version patch-level, link to parent, and optionally record reason."""
         skill = self.get_skill(sid)
         if skill is None:
             raise ValueError(f"Skill {sid} not found")
@@ -214,6 +214,23 @@ class SkillManager:
             cols = self._cols(conn.execute("SELECT * FROM skills WHERE id = ?", (sid,)))
         if row is None:
             raise ValueError(f"Skill {sid} not found after upgrade")
+
+        # Record upgrade reason to ReflectionPool if provided
+        if reason:
+            try:
+                from ..reflection_pool import ReflectionPool
+                pool = ReflectionPool()
+                pool.add(
+                    title=f"skill-upgrade: {skill.name} → v{new_ver}",
+                    content=reason,
+                    tags=["skill-upgrade", skill.name],
+                    source="evolution",
+                    reason=reason,
+                )
+                pool.close()
+            except Exception:
+                pass  # ponytail: L5 — ReflectionPool 写入失败不影响 upgrade 主流程
+
         return self._from_row(row, cols)
 
     def close(self) -> None:

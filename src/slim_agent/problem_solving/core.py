@@ -183,7 +183,12 @@ def learn_from_error(
     - source=error
     - 内容结构化（problem / context / lesson）
     - 可关联 skill
+    - 必须包含 context 和 lesson（One-Check Rule：无教训不算学习）
     """
+    # ponytail: One-Check Rule — learn_from_error 必须有 context + lesson
+    assert context, f"learn_from_error requires context (got empty). error_type={error_type}"
+    assert lesson, f"learn_from_error requires lesson (got empty). error_type={error_type}"
+
     problem = f"{error_type}: {error_message}"
     content_parts = [
         "## Error",

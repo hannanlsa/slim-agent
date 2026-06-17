@@ -318,14 +318,18 @@ def skill_archive(skill_id: int, db_path: Path) -> None:
 
 @skill.command(name="upgrade")
 @click.argument("skill_id", type=int)
+@click.option("--reason", default="", help="Reason for the upgrade (recorded to ReflectionPool)")
 @_db_opt
-def skill_upgrade(skill_id: int, db_path: Path) -> None:
+def skill_upgrade(skill_id: int, reason: str, db_path: Path) -> None:
     """Upgrade a skill (bump version patch-level)."""
     mgr = SkillManager(db_path)
     try:
-        entry = mgr.upgrade(skill_id)
+        entry = mgr.upgrade(skill_id, reason=reason)
         mgr.close()
-        click.echo(f"Upgraded skill #{entry.id} '{entry.name}' to v{entry.version}")
+        msg = f"Upgraded skill #{entry.id} '{entry.name}' to v{entry.version}"
+        if reason:
+            msg += f" (reason: {reason})"
+        click.echo(msg)
     except ValueError as exc:
         mgr.close()
         click.echo(str(exc), err=True)
@@ -437,6 +441,83 @@ def slim(threshold: float, db_path: Path) -> None:
             click.echo(f"  - {name}")
         click.echo(f"  Shared tags: {tags_str}")
         click.echo(f"  Reason: {s.reason}")
+
+
+# ── audit command (ponytail-review for skills) ─────────────────────────────────
+
+
+@cli.command(name="audit")
+@_db_opt
+def audit(db_path: Path) -> None:
+    """Audit skills for over-engineering patterns (read-only, advisory)."""
+    import re as _re
+
+    mgr = SkillManager(db_path)
+    skills = mgr.list_skills()
+    mgr.close()
+
+    if not skills:
+        click.echo("No skills to audit.")
+        return
+
+    tags_count = {"delete": 0, "stdlib": 0, "native": 0, "yagni": 0, "shrink": 0}
+    findings = []
+
+    for s in skills:
+        # Check for over-engineering signals
+        name = s.name
+        desc = s.description or ""
+        tags = s.tags or []
+
+        # yagni: too many tags for simple skill
+        if len(tags) > 10:
+            findings.append(f"[yagni] skill #{s.id} '{name}' — {len(tags)} tags, likely over-classified")
+            tags_count["yagni"] += 1
+
+        # delete: empty description AND no tags
+        if not desc.strip() and not tags:
+            findings.append(f"[delete] skill #{s.id} '{name}' — no description, no tags")
+            tags_count["delete"] += 1
+
+        # shrink: very long description
+        if len(desc) > 500:
+            findings.append(f"[shrink] skill #{s.id} '{name}' — description {len(desc)} chars, consider condensing")
+            tags_count["shrink"] += 1
+
+        # stdlib: common patterns that should use builtins
+        stdlib_patterns = [
+            (r"request[s]?\b", "use urllib.request (stdlib)"),
+            (r"simplejson", "use json (stdlib)"),
+            (r"pathlib2", "use pathlib (stdlib, Python 3.4+)"),
+        ]
+        for pat, suggestion in stdlib_patterns:
+            if _re.search(pat, desc, _re.IGNORECASE):
+                findings.append(f"[stdlib] skill #{s.id} '{name}' — {suggestion}")
+                tags_count["stdlib"] += 1
+
+        # native: common patterns
+        native_patterns = [
+            (r"cache.*dict", "use functools.lru_cache (native)"),
+            (r"enum.*constant", "use enum.Enum (native)"),
+        ]
+        for pat, suggestion in native_patterns:
+            if _re.search(pat, desc, _re.IGNORECASE):
+                findings.append(f"[native] skill #{s.id} '{name}' — {suggestion}")
+                tags_count["native"] += 1
+
+    click.echo(f"Audited {len(skills)} skill(s)\n")
+    if not findings:
+        click.echo("No over-engineering patterns found.")
+        return
+
+    for f in findings:
+        click.echo(f)
+
+    click.echo(f"\nSummary:")
+    for tag, cnt in tags_count.items():
+        if cnt:
+            click.echo(f"  {tag}: {cnt}")
+    click.echo(f"  Total: {sum(tags_count.values())} finding(s)")
 
 
 # ── fetch command ──────────────────────────────────────────────────────────────

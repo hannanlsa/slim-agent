@@ -1,5 +1,7 @@
 """URL fetching with HTML→text extraction and fallback support."""
 
+# ponytail: L2 stdlib-ok | 已知限制：urllib 无 HTTP/2、无连接池复用 | 升级：如需高性能可换 httpx
+
 from __future__ import annotations
 
 import re
@@ -7,11 +9,8 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
-
-try:
-    import requests
-except ImportError:
-    requests = None  # type: ignore
+from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
 
 
 _STripper = re.compile(r"<[^>]+>")
@@ -78,26 +77,26 @@ def fetch_content(url: str, timeout: float = 10.0) -> FetchResult:
     FetchResult
         Always returned; check ``result.ok`` for success.
     """
-    if requests is None:
+    try:
+        req = Request(url, headers={"User-Agent": "SLIM-Agent/0.2"})
+        with urlopen(req, timeout=timeout) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+            content = _html_to_text(raw)
+            return FetchResult(
+                url=url,
+                content=content,
+                status_code=resp.status,
+                fetched_at=datetime.now(timezone.utc),
+            )
+    except HTTPError as exc:
         return FetchResult(
             url=url,
             content="",
-            status_code=0,
+            status_code=exc.code,
             fetched_at=datetime.now(timezone.utc),
-            error="requests library not installed",
+            error=str(exc),
         )
-
-    try:
-        resp = requests.get(url, timeout=timeout, headers={"User-Agent": "SLIM-Agent/0.1"}, stream=True)
-        raw = resp.content.decode("utf-8", errors="replace")
-        content = _html_to_text(raw)
-        return FetchResult(
-            url=url,
-            content=content,
-            status_code=resp.status_code,
-            fetched_at=datetime.now(timezone.utc),
-        )
-    except Exception as exc:
+    except (URLError, OSError) as exc:
         return FetchResult(
             url=url,
             content="",
@@ -139,3 +138,11 @@ def fetch_with_fallback(
         fetched_at=datetime.now(timezone.utc),
         error="No URLs provided",
     )
+
+
+if __name__ == "__main__":
+    # ponytail: L2 self-test — urllib 替代 requests 的基本验证
+    r = fetch_content("https://httpbin.org/get")
+    assert r.ok, f"fetch failed: {r.error}"
+    assert "SLIM-Agent" in r.content or "url" in r.content.lower(), f"unexpected content: {r.content[:200]}"
+    print(f"✓ fetch_content ok (status={r.status_code}, content_len={len(r.content)})")

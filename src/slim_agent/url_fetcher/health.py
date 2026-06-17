@@ -1,5 +1,7 @@
 """URL health-check / liveness probe."""
 
+# ponytail: L2 stdlib-ok | 已知限制：urllib 无 HEAD 自动重试 | 升级：如需重试可加 urllib.retry（Python 3.11+）
+
 from __future__ import annotations
 
 import time
@@ -7,11 +9,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Iterable
-
-try:
-    import requests
-except ImportError:
-    requests = None  # type: ignore
+from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
 
 
 @dataclass
@@ -52,22 +51,18 @@ def check_url(url: str, timeout: float = 5.0) -> HealthResult:
     -------
     HealthResult
     """
-    if requests is None:
-        return HealthResult(
-            url=url,
-            alive=False,
-            status_code=0,
-            response_time_ms=0.0,
-            error="requests library not installed",
-        )
-
     start = time.perf_counter()
     try:
-        resp = requests.head(url, timeout=timeout, allow_redirects=True)
+        req = Request(url, method="HEAD", headers={"User-Agent": "SLIM-Agent/0.2"})
+        with urlopen(req, timeout=timeout) as resp:
+            elapsed = (time.perf_counter() - start) * 1000
+            alive = 200 <= resp.status < 400
+            return HealthResult(url=url, alive=alive, status_code=resp.status, response_time_ms=elapsed)
+    except HTTPError as exc:
         elapsed = (time.perf_counter() - start) * 1000
-        alive = 200 <= resp.status_code < 400
-        return HealthResult(url=url, alive=alive, status_code=resp.status_code, response_time_ms=elapsed)
-    except Exception as exc:
+        alive = 200 <= exc.code < 400
+        return HealthResult(url=url, alive=alive, status_code=exc.code, response_time_ms=elapsed, error=str(exc))
+    except (URLError, OSError) as exc:
         elapsed = (time.perf_counter() - start) * 1000
         return HealthResult(
             url=url,
@@ -98,3 +93,10 @@ def batch_check(urls: Iterable[str], timeout: float = 5.0, max_workers: int = 10
             results.append(fut.result())
 
     return HealthReport(results=results)
+
+
+if __name__ == "__main__":
+    # ponytail: L2 self-test — urllib HEAD 健康检查基本验证
+    r = check_url("https://httpbin.org/get", timeout=10)
+    assert r.alive, f"health check failed: {r.error}"
+    print(f"✓ check_url ok (status={r.status_code}, {r.response_time_ms:.0f}ms)")
