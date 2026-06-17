@@ -420,12 +420,11 @@ def reflect_search(keyword: str, db_path: Path) -> None:
 
 
 @cli.command(name="slim")
-@click.option("--threshold", type=float, default=0.3, show_default=True, help="Minimum overlap score to report")
 @_db_opt
-def slim(threshold: float, db_path: Path) -> None:
+def slim(db_path: Path) -> None:
     """Scan active skills for redundancy and suggest merges (read-only)."""
     mgr = SkillManager(db_path)
-    reducer = SlimReducer(mgr, threshold=threshold)
+    reducer = SlimReducer(mgr)
     report = reducer.scan_skills()
     mgr.close()
 
@@ -453,7 +452,7 @@ def audit(db_path: Path) -> None:
     import re as _re
 
     mgr = SkillManager(db_path)
-    skills = mgr.list_skills()
+    skills = mgr.list_all()
     mgr.close()
 
     if not skills:
@@ -466,7 +465,7 @@ def audit(db_path: Path) -> None:
     for s in skills:
         # Check for over-engineering signals
         name = s.name
-        desc = s.description or ""
+        desc = s.summary or ""
         tags = s.tags or []
 
         # yagni: too many tags for simple skill
