@@ -37,7 +37,7 @@ SLIM-Agent solves both:
 
 ## 🎯 Evolution Direction (目标进化方向)
 
-> **Last updated**: 2026-06-16 · **Owner**: 潘笑
+> **Last updated**: 2026-06-16 · **Owner**: hannanlsa
 > 所有学习知识和技术改进都**围绕这五个方向**展开。只有与这五个方向相关的提升才值得改动。
 
 slim-agent's development is locked to **five evolution pillars**, inspired by how the human brain manages knowledge:

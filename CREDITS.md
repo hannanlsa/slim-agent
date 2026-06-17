@@ -129,7 +129,7 @@ These are ideas that don't map to specific files but shape the project's stance.
 
 ## Author's Note (2026-06-15)
 
-This project was built in one afternoon by a single author (潘笑) using:
+This project was built in one afternoon by a single author (hannanlsa) using:
 - A sub-agent (slim-agent-generator) to write the initial code
 - A code reviewer agent to fix 3 bugs after the first round of tests
 - Open-source tools and ideas from the projects credited above
