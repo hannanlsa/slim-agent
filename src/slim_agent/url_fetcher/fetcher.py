@@ -124,6 +124,8 @@ def fetch_with_fallback(
     FetchResult
         First successful result, or last failure result.
     """
+    if fallback_urls is None:
+        fallback_urls = []
     all_urls = [primary_url] + list(fallback_urls)
     last: FetchResult | None = None
     for u in all_urls:

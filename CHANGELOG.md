@@ -73,6 +73,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - PyPI production release (v0.1.5 → v0.1.6)
 
+## [0.3.2] - 2026-06-17
+
+### Added
+- `slim skill dedupe` — merge hyphen/underscore duplicate skills (e.g. `adaptive_checkpoint` ↔ `adaptive-checkpoint`); supports `--dry-run` and `--prefer {hyphen,underscore}`; auto-archives the loser
+- `slim problem-solve` — wire problem_solving module into the main CLI; subcommands: `learn` / `manual` / `error` / `evolution` / `list` / `get` / `rollback` / `diff` (use `--` to pass through argparse options, e.g. `slim problem-solve -- learn "..." --reason "..."`)
+
+### Fixed
+- `fetch_with_fallback()` crashed with `TypeError: 'NoneType' object is not iterable` when `fallback_urls=None`; now defaults to `[]`
+- `slim fetch` no longer crashes when an entry's `fallback_urls` column is NULL
+
+### Tests
+- Replaced fake-URL tests (e.g. `https://a.com`) with a local `http.server` fixture — 22/22 URL fetcher tests pass offline (was 9 failing pre-existing)
+
 ## [0.1.1] - 2026-06-15
 
 ### Added

@@ -336,6 +336,56 @@ def skill_upgrade(skill_id: int, reason: str, db_path: Path) -> None:
         raise SystemExit(1)
 
 
+@skill.command(name="dedupe")
+@click.option("--dry-run", is_flag=True, help="Show what would be merged without modifying anything")
+@click.option("--prefer", type=click.Choice(["hyphen", "underscore"]), default="hyphen", help="Which form to keep (the other gets archived)")
+@_db_opt
+def skill_dedupe(dry_run: bool, prefer: str, db_path: Path) -> None:
+    """Merge hyphen/underscore skill duplicates (e.g. write-permission-matrix vs write_permission_matrix)."""
+    mgr = SkillManager(db_path)
+    skills = mgr.list_all()
+
+    # Group by normalized name
+    groups: dict[str, list] = {}
+    for s in skills:
+        norm = s.name.replace("-", "_")
+        groups.setdefault(norm, []).append(s)
+
+    duplicates = {k: v for k, v in groups.items() if len(v) > 1}
+    if not duplicates:
+        click.echo(f"No duplicates found ({len(skills)} skills, {len(groups)} unique).")
+        mgr.close()
+        return
+
+    merged = 0
+    for norm, group in sorted(duplicates.items()):
+        # Pick the survivor based on prefer
+        if prefer == "hyphen":
+            survivor = next((s for s in group if "-" in s.name), group[0])
+        else:
+            survivor = next((s for s in group if "_" in s.name), group[0])
+
+        for s in group:
+            if s.id == survivor.id:
+                continue
+            if dry_run:
+                click.echo(f"[DRY] would archive: #{s.id} '{s.name}' (keep #{survivor.id} '{survivor.name}')")
+            else:
+                try:
+                    # draft → active → deprecated → archived
+                    if s.status == SkillStatus.ACTIVE:
+                        mgr.deprecate(s.id)
+                    mgr.archive(s.id)
+                    click.echo(f"Archived #{s.id} '{s.name}' (kept #{survivor.id} '{survivor.name}')")
+                    merged += 1
+                except Exception as exc:
+                    click.echo(f"Failed to archive #{s.id} '{s.name}': {exc}", err=True)
+
+    mgr.close()
+    verb = "would merge" if dry_run else "merged"
+    click.echo(f"\n{verb} {merged} duplicates across {len(duplicates)} groups.")
+
+
 # ── reflect commands ───────────────────────────────────────────────────────────
 
 
@@ -536,7 +586,7 @@ def fetch(pointer_id: int, timeout: float, db_path: Path) -> None:
         click.echo(f"Pointer #{pointer_id} not found.", err=True)
         raise SystemExit(1)
 
-    result = fetch_with_fallback(entry.primary_url, entry.fallback_urls, timeout=timeout)
+    result = fetch_with_fallback(entry.primary_url, entry.fallback_urls or [], timeout=timeout)
     if result.ok:
         click.echo(result.content[:2000])
         if len(result.content) > 2000:
@@ -574,6 +624,43 @@ def health(timeout: float, db_path: Path) -> None:
 cli.add_command(pointer)
 cli.add_command(skill)
 cli.add_command(reflect)
+
+
+# ── problem-solving subcommand (问题驱动学习) ──────────────────────────────
+
+@cli.command(name="problem-solve")
+@click.argument("args", nargs=-1)
+@_db_opt
+def problem_solve_cmd(args: tuple, db_path: Path) -> None:
+    """Problem-driven learning: 遇到问题 → 根源追踪 → 验证 → 沉淀.
+
+    Subcommands:
+      learn <problem>     记录一个问题（自动 websearch 验证）
+      manual <topic>      主人显式指令触发
+      error <type> <msg>  错误反思触发
+      evolution <cap>     记录能力进化
+      list                列出所有学习条目
+      get <slug>          获取学习条目
+      rollback <slug> --to N  回滚到指定版本
+      diff <slug> --against N  对比版本
+
+    Examples:
+      slim problem-solve learn "为什么 reflection_pool rollback 后 update 产生重复版本号"
+      slim problem-solve manual "研究 v0.2.0 的 SimHash 阈值校准"
+      slim problem-solve list --source error
+    """
+    import sys
+    from slim_agent.problem_solving import core as ps
+
+    argv = ["problem-solving"] + list(args)
+    old_argv = sys.argv
+    sys.argv = argv
+    try:
+        ps.main()
+    except SystemExit:
+        pass
+    finally:
+        sys.argv = old_argv
 
 
 if __name__ == "__main__":

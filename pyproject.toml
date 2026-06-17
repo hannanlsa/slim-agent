@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "slim-agent"
-version = "0.3.1"
+version = "0.3.2"
 description = "Self-Learning Index Memory for AI agents"
 readme = "README.md"
 license = "MIT"
