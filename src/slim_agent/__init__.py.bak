@@ -1,6 +1,6 @@
 """SLIM-Agent: Self-Learning Index Memory for AI agents."""
 
-__version__ = "0.4.0"
+__version__ = "0.3.2"
 
 # Convenience re-exports so users can write `from slim_agent import PointerStore`
 # instead of the longer `from slim_agent.pointer_memory.store import PointerStore`.
@@ -16,16 +16,6 @@ from slim_agent.slim_reducer.reducer import SlimReducer
 from slim_agent.slim_reducer.models import MergeSuggestion, RedundancyReport
 from slim_agent.url_fetcher.fetcher import fetch_content, fetch_with_fallback
 from slim_agent.url_fetcher.health import check_url, batch_check
-
-# P1 模拟人脑提升 (L3→L5) — 借鉴 GBrain
-from slim_agent import (
-    retrieval_reflex,   # P1.1: Retrieval Reflex
-    gap_analysis,       # P1.2: Gap Analysis
-    dream_cycle,        # P1.3: Dream Cycle 轻量版
-)
-
-# P5 问题驱动学习提升 (L2→L3) — 借鉴 GBrain
-from slim_agent import eval_framework  # P5.1: Eval Framework
 
 __all__ = [
     "__version__",
@@ -48,10 +38,4 @@ __all__ = [
     "fetch_with_fallback",
     "check_url",
     "batch_check",
-    # P1 — GBrain inspired
-    "retrieval_reflex",
-    "gap_analysis",
-    "dream_cycle",
-    # P5 — GBrain inspired
-    "eval_framework",
 ]

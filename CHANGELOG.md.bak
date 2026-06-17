@@ -5,20 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] - 2026-06-18
-
-### P1 模拟人脑提升 (L3→L5) — 借鉴 GBrain
-- **Retrieval Reflex**: 自动提取 salient entity → memory search → context 注入 (208 lines)
-- **Gap Analysis**: 关键词覆盖率检查 + [MEMORY GAP] 显式标注 (219 lines)
-- **Dream Cycle 轻量版**: 3 阶段定期整理（去重/摘要/过期检查）(261 lines)
-
-### P5 问题驱动学习提升 (L2→L3) — 借鉴 GBrain
-- **Eval Framework**: 7 个 eval 场景 + 定期运行 + 通过/失败指标
-- **CLI 扩展**: `slim dream` / `slim eval` / `slim gap` / `slim reflex`
-
-### 致谢
-- 添加 GBrain、Horizon 致谢到 ACKNOWLEDGEMENTS.md
-
 ## [0.2.0] - 2026-06-16
 
 ### Added (Q3 + Q4 Integration)
